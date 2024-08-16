@@ -4,10 +4,6 @@ import PackageDescription
 
 let package = Package(
     name: "secp256k1.swift",
-    platforms: [
-        .macOS(.v12),
-        .iOS(.v13)
-    ],
     products: [
         // WARNING: These APIs should not be considered stable and may change at any time.
         .library(name: "secp256k1", targets: ["secp256k1"]),
