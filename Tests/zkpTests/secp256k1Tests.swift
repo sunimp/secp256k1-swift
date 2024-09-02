@@ -1,12 +1,63 @@
 #if canImport(zkp)
-    @testable import zkp
+@testable import zkp
 #else
-    @testable import secp256k1
+@testable import secp256k1
 #endif
 
 import XCTest
 
+// MARK: - secp256k1Tests
+
 final class secp256k1Tests: XCTestCase {
+    // MARK: Static Properties
+
+    static var allTests = [
+        ("testUncompressedKeypairCreation", testUncompressedKeypairCreation),
+        ("testCompressedKeypairCreation", testCompressedKeypairCreation),
+        ("testECDHBindings", testECDHBindings),
+        ("testExtraKeysBindings", testExtraKeysBindings),
+        ("testRecoveryBindings", testRecoveryBindings),
+        ("testSchnorrBindings", testSchnorrBindings),
+        ("testCompressedKeypairImplementationWithRaw", testCompressedKeypairImplementationWithRaw),
+        ("testSha256", testSha256),
+        ("testShaHashDigest", testShaHashDigest),
+        ("testRecoverySigning", testRecoverySigning),
+        ("testPublicKeyRecovery", testPublicKeyRecovery),
+        ("testSigning", testSigning),
+        ("testSchnorrSigning", testSchnorrSigning),
+        ("testVerifying", testVerifying),
+        ("testSchnorrVerifyingPre", testSchnorrVerifyingPre),
+        ("testSchnorrVerifying", testSchnorrVerifying),
+        ("testVerifyingDER", testVerifyingDER),
+        ("testPrivateKey", testPrivateKey),
+        ("testCompressedPublicKey", testCompressedPublicKey),
+        ("testUncompressedPublicKey", testUncompressedPublicKey),
+        ("testUncompressedPublicKeyWithKey", testUncompressedPublicKeyWithKey),
+        ("testInvalidRawSignature", testInvalidRawSignature),
+        ("testInvalidDerSignature", testInvalidDerSignature),
+        ("testInvalidPrivateKeyBytes", testInvalidPrivateKeyBytes),
+        ("testInvalidPrivateKeyLength", testInvalidPrivateKeyLength),
+        ("testKeypairSafeCompare", testKeypairSafeCompare),
+        ("testZeroization", testZeroization),
+        ("testPrivateKeyTweakAdd", testPrivateKeyTweakAdd),
+        ("testKeyAgreement", testKeyAgreement),
+        ("testKeyAgreementHashFunction", testKeyAgreementHashFunction),
+        ("testKeyAgreementPublicKeyTweakAdd", testKeyAgreementPublicKeyTweakAdd),
+        ("testXonlyToPublicKey", testXonlyToPublicKey),
+        ("testTapscript", testTapscript),
+        ("testCompactSizePrefix", testCompactSizePrefix),
+        ("testSchnorrNegating", testSchnorrNegating),
+        ("testTaprootDerivation", testTaprootDerivation),
+        ("testPubkeyCombine", testPubkeyCombine),
+        ("testPubkeyCombineBindings", testPubkeyCombineBindings),
+        ("testPrivateKeyPEM", testPrivateKeyPEM),
+        ("testPublicKeyPEM", testPublicKeyPEM),
+        ("testSigningPEM", testSigningPEM),
+        ("testVerifyingPEM", testVerifyingPEM),
+    ]
+
+    // MARK: Functions
+
     /// Uncompressed Key pair test
     func testUncompressedKeypairCreation() {
         // Initialize context
@@ -25,11 +76,14 @@ final class secp256k1Tests: XCTestCase {
         // Verify the context and keys are setup correctly
         XCTAssertEqual(secp256k1_context_randomize(context, privateKey), 1)
         XCTAssertEqual(secp256k1_ec_pubkey_create(context, &cPubkey, privateKey), 1)
-        XCTAssertEqual(secp256k1_ec_pubkey_serialize(context, &publicKey, &pubkeyLen, &cPubkey, UInt32(SECP256K1_EC_UNCOMPRESSED)), 1)
+        XCTAssertEqual(
+            secp256k1_ec_pubkey_serialize(context, &publicKey, &pubkeyLen, &cPubkey, UInt32(SECP256K1_EC_UNCOMPRESSED)),
+            1
+        )
 
         let hexString = """
-        04734B3511150A60FC8CAC329CD5FF804555728740F2F2E98BC4242135EF5D5E4E6C4918116B0866F50C46614F3015D8667FBFB058471D662A642B8EA2C9C78E8A
-        """
+            04734B3511150A60FC8CAC329CD5FF804555728740F2F2E98BC4242135EF5D5E4E6C4918116B0866F50C46614F3015D8667FBFB058471D662A642B8EA2C9C78E8A
+            """
 
         // Define the expected public key
         let expectedPublicKey = try! hexString.bytes
@@ -56,7 +110,10 @@ final class secp256k1Tests: XCTestCase {
         // Verify the context and keys are setup correctly
         XCTAssertEqual(secp256k1_context_randomize(context, privateKey), 1)
         XCTAssertEqual(secp256k1_ec_pubkey_create(context, &cPubkey, privateKey), 1)
-        XCTAssertEqual(secp256k1_ec_pubkey_serialize(context, &publicKey, &pubkeyLen, &cPubkey, UInt32(SECP256K1_EC_COMPRESSED)), 1)
+        XCTAssertEqual(
+            secp256k1_ec_pubkey_serialize(context, &publicKey, &pubkeyLen, &cPubkey, UInt32(SECP256K1_EC_COMPRESSED)),
+            1
+        )
 
         // Define the expected public key
         let expectedPublicKey = try! "02EA724B70B48B61FB87E4310871A48C65BF38BF3FDFEFE73C2B90F8F32F9C1794".bytes
@@ -175,8 +232,10 @@ final class secp256k1Tests: XCTestCase {
     }
 
     func testSigning() {
-        let expectedDerSignature = "MEQCIHS177uYACnX8HzD+hGbG5X/F4iHuRm2DvTylOCV4fmsAiBWbj0MDud/oVzRqL87JjZpCN+kLl8Egcc/GiOigWJg+A=="
-        let expectedSignature = "rPnhleCU8vQOthm5h4gX/5UbmxH6w3zw1ykAmLvvtXT4YGKBoiMaP8eBBF8upN8IaTYmO7+o0Vyhf+cODD1uVg=="
+        let expectedDerSignature =
+            "MEQCIHS177uYACnX8HzD+hGbG5X/F4iHuRm2DvTylOCV4fmsAiBWbj0MDud/oVzRqL87JjZpCN+kLl8Egcc/GiOigWJg+A=="
+        let expectedSignature =
+            "rPnhleCU8vQOthm5h4gX/5UbmxH6w3zw1ykAmLvvtXT4YGKBoiMaP8eBBF8upN8IaTYmO7+o0Vyhf+cODD1uVg=="
         let expectedPrivateKey = "5f6d5afecc677d66fb3d41eee7a8ad8195659ceff588edaf416a9a17daf38fdd"
         let privateKeyBytes = try! expectedPrivateKey.bytes
         let privateKey = try! secp256k1.Signing.PrivateKey(dataRepresentation: privateKeyBytes)
@@ -190,9 +249,12 @@ final class secp256k1Tests: XCTestCase {
     }
 
     func testRecoverySigning() {
-        let expectedDerSignature = "MEQCIHS177uYACnX8HzD+hGbG5X/F4iHuRm2DvTylOCV4fmsAiBWbj0MDud/oVzRqL87JjZpCN+kLl8Egcc/GiOigWJg+A=="
-        let expectedRecoverySignature = "rPnhleCU8vQOthm5h4gX/5UbmxH6w3zw1ykAmLvvtXT4YGKBoiMaP8eBBF8upN8IaTYmO7+o0Vyhf+cODD1uVgE="
-        let expectedSignature = "rPnhleCU8vQOthm5h4gX/5UbmxH6w3zw1ykAmLvvtXT4YGKBoiMaP8eBBF8upN8IaTYmO7+o0Vyhf+cODD1uVg=="
+        let expectedDerSignature =
+            "MEQCIHS177uYACnX8HzD+hGbG5X/F4iHuRm2DvTylOCV4fmsAiBWbj0MDud/oVzRqL87JjZpCN+kLl8Egcc/GiOigWJg+A=="
+        let expectedRecoverySignature =
+            "rPnhleCU8vQOthm5h4gX/5UbmxH6w3zw1ykAmLvvtXT4YGKBoiMaP8eBBF8upN8IaTYmO7+o0Vyhf+cODD1uVgE="
+        let expectedSignature =
+            "rPnhleCU8vQOthm5h4gX/5UbmxH6w3zw1ykAmLvvtXT4YGKBoiMaP8eBBF8upN8IaTYmO7+o0Vyhf+cODD1uVg=="
         let expectedPrivateKey = "5f6d5afecc677d66fb3d41eee7a8ad8195659ceff588edaf416a9a17daf38fdd"
         let privateKeyBytes = try! expectedPrivateKey.bytes
         let privateKey = try! secp256k1.Recovery.PrivateKey(dataRepresentation: privateKeyBytes)
@@ -211,7 +273,8 @@ final class secp256k1Tests: XCTestCase {
     }
 
     func testPublicKeyRecovery() {
-        let expectedRecoverySignature = "rPnhleCU8vQOthm5h4gX/5UbmxH6w3zw1ykAmLvvtXT4YGKBoiMaP8eBBF8upN8IaTYmO7+o0Vyhf+cODD1uVgE="
+        let expectedRecoverySignature =
+            "rPnhleCU8vQOthm5h4gX/5UbmxH6w3zw1ykAmLvvtXT4YGKBoiMaP8eBBF8upN8IaTYmO7+o0Vyhf+cODD1uVgE="
         let expectedPrivateKey = "5f6d5afecc677d66fb3d41eee7a8ad8195659ceff588edaf416a9a17daf38fdd"
         let privateKeyBytes = try! expectedPrivateKey.bytes
         let privateKey = try! secp256k1.Recovery.PrivateKey(dataRepresentation: privateKeyBytes)
@@ -229,8 +292,10 @@ final class secp256k1Tests: XCTestCase {
     }
 
     func testSchnorrSigning() {
-        let expectedDerSignature = "6QeDH4CEjRBppTcbQCQQNkvfHF+DB7AITFXxzi3KghUl9mpKheqLceSCp084LSzl6+7o/bIXL0d99JANMQU2wA=="
-        let expectedSignature = "e907831f80848d1069a5371b402410364bdf1c5f8307b0084c55f1ce2dca821525f66a4a85ea8b71e482a74f382d2ce5ebeee8fdb2172f477df4900d310536c0"
+        let expectedDerSignature =
+            "6QeDH4CEjRBppTcbQCQQNkvfHF+DB7AITFXxzi3KghUl9mpKheqLceSCp084LSzl6+7o/bIXL0d99JANMQU2wA=="
+        let expectedSignature =
+            "e907831f80848d1069a5371b402410364bdf1c5f8307b0084c55f1ce2dca821525f66a4a85ea8b71e482a74f382d2ce5ebeee8fdb2172f477df4900d310536c0"
         let expectedPrivateKey = "0000000000000000000000000000000000000000000000000000000000000003"
         let privateKeyBytes = try! expectedPrivateKey.bytes
         let privateKey = try! secp256k1.Schnorr.PrivateKey(dataRepresentation: privateKeyBytes)
@@ -259,7 +324,8 @@ final class secp256k1Tests: XCTestCase {
 
     func testSchnorrVerifyingPre() {
         let expectedPrivateKey = "4894b8087f428971b55ff96e16f7127340138bc84e7973821a224cad02055975"
-        let expectedSignature = "ad57c21d383ef8ac799adfd469a221c40ef9f09563a16682b9ab1edc46c33d6d6a1d719761d269e87ab971e0ffafc1618a4666a4f9aef4abddc3ea9fc0cd5b12"
+        let expectedSignature =
+            "ad57c21d383ef8ac799adfd469a221c40ef9f09563a16682b9ab1edc46c33d6d6a1d719761d269e87ab971e0ffafc1618a4666a4f9aef4abddc3ea9fc0cd5b12"
         let privateKeyBytes = try! expectedPrivateKey.bytes
         let throwKey = try! secp256k1.Schnorr.PrivateKey(dataRepresentation: privateKeyBytes)
         let privateKey = try! secp256k1.Schnorr.PrivateKey(dataRepresentation: privateKeyBytes)
@@ -288,7 +354,10 @@ final class secp256k1Tests: XCTestCase {
     }
 
     func testVerifyingDER() {
-        let expectedDerSignature = Data(base64Encoded: "MEQCIHS177uYACnX8HzD+hGbG5X/F4iHuRm2DvTylOCV4fmsAiBWbj0MDud/oVzRqL87JjZpCN+kLl8Egcc/GiOigWJg+A==", options: .ignoreUnknownCharacters)!
+        let expectedDerSignature = Data(
+            base64Encoded: "MEQCIHS177uYACnX8HzD+hGbG5X/F4iHuRm2DvTylOCV4fmsAiBWbj0MDud/oVzRqL87JjZpCN+kLl8Egcc/GiOigWJg+A==",
+            options: .ignoreUnknownCharacters
+        )!
         let expectedPrivateKey = "5f6d5afecc677d66fb3d41eee7a8ad8195659ceff588edaf416a9a17daf38fdd"
         let privateKeyBytes = try! expectedPrivateKey.bytes
         let privateKey = try! secp256k1.Signing.PrivateKey(dataRepresentation: privateKeyBytes)
@@ -326,8 +395,8 @@ final class secp256k1Tests: XCTestCase {
         XCTAssertEqual(privateKey.publicKey.dataRepresentation.count, secp256k1.Format.uncompressed.length)
 
         let expectedPublicKeyString = """
-        04c9c68596824505dd6cd1993a16452b4b1a13bacde56f80e9049fd03850cce137c1fa4acb7bef7edcc04f4fa29e071ea17e34fa07fa5d87b5ebf6340df6558498
-        """
+            04c9c68596824505dd6cd1993a16452b4b1a13bacde56f80e9049fd03850cce137c1fa4acb7bef7edcc04f4fa29e071ea17e34fa07fa5d87b5ebf6340df6558498
+            """
 
         // Define the expected public key
         let expectedPublicKey = try! expectedPublicKeyString.bytes
@@ -396,7 +465,7 @@ final class secp256k1Tests: XCTestCase {
 
         let set0 = Set(array)
 
-        array = [UInt8](repeating: 1, count: Int.random(in: 10...100_000))
+        array = [UInt8](repeating: 1, count: Int.random(in: 10 ... 100000))
 
         XCTAssertGreaterThan(array.count, 9)
 
@@ -435,8 +504,14 @@ final class secp256k1Tests: XCTestCase {
         let privateKey1 = try! secp256k1.KeyAgreement.PrivateKey(dataRepresentation: privateBytes1)
         let privateKey2 = try! secp256k1.KeyAgreement.PrivateKey(dataRepresentation: privateBytes2)
 
-        let sharedSecret1 = try! privateKey1.sharedSecretFromKeyAgreement(with: privateKey2.publicKey, format: .uncompressed)
-        let sharedSecret2 = try! privateKey2.sharedSecretFromKeyAgreement(with: privateKey1.publicKey, format: .uncompressed)
+        let sharedSecret1 = try! privateKey1.sharedSecretFromKeyAgreement(
+            with: privateKey2.publicKey,
+            format: .uncompressed
+        )
+        let sharedSecret2 = try! privateKey2.sharedSecretFromKeyAgreement(
+            with: privateKey1.publicKey,
+            format: .uncompressed
+        )
 
         XCTAssertEqual(sharedSecret1.bytes, sharedSecret2.bytes)
     }
@@ -450,7 +525,10 @@ final class secp256k1Tests: XCTestCase {
         let sharedSecret1 = try! privateKey1.sharedSecretFromKeyAgreement(with: privateKey2.publicKey)
         var sharedSecret2 = [UInt8](repeating: 0, count: 32)
 
-        XCTAssertEqual(secp256k1_ec_pubkey_parse(context, &pub, privateKey1.publicKey.bytes, privateKey1.publicKey.bytes.count), 1)
+        XCTAssertEqual(
+            secp256k1_ec_pubkey_parse(context, &pub, privateKey1.publicKey.bytes, privateKey1.publicKey.bytes.count),
+            1
+        )
         XCTAssertEqual(secp256k1_ecdh(context, &sharedSecret2, &pub, privateKey2.baseKey.key.bytes, nil, nil), 1)
 
         let symmerticKey = SHA256.hash(data: sharedSecret1.bytes)
@@ -465,7 +543,8 @@ final class secp256k1Tests: XCTestCase {
         let privateKey1 = try! secp256k1.KeyAgreement.PrivateKey(dataRepresentation: privateSign1.dataRepresentation)
         let privateKey2 = try! secp256k1.KeyAgreement.PrivateKey(dataRepresentation: privateSign2.dataRepresentation)
 
-        let publicKey1 = try! secp256k1.KeyAgreement.PublicKey(dataRepresentation: privateKey1.publicKey.dataRepresentation)
+        let publicKey1 = try! secp256k1.KeyAgreement
+            .PublicKey(dataRepresentation: privateKey1.publicKey.dataRepresentation)
 
         let sharedSecret1 = try! privateKey1.sharedSecretFromKeyAgreement(with: privateKey2.publicKey)
         let sharedSecret2 = try! privateKey2.sharedSecretFromKeyAgreement(with: publicKey1)
@@ -564,9 +643,16 @@ final class secp256k1Tests: XCTestCase {
     }
 
     func testCompactSizePrefix() {
-        let bytes = try! "c15bf08d58a430f8c222bffaf9127249c5cdff70a2d68b2b45637eb662b6b88eb5c81451874bd9ebd4b6fd4bba1f84cdfb533c532365d22a0a702205ff658b17c9".bytes
-        let compactBytes = "41c15bf08d58a430f8c222bffaf9127249c5cdff70a2d68b2b45637eb662b6b88eb5c81451874bd9ebd4b6fd4bba1f84cdfb533c532365d22a0a702205ff658b17c9"
-        XCTAssertEqual(compactBytes, String(bytes: Array(Data(bytes).compactSizePrefix)), "Compact size prefix encoding is incorrect.")
+        let bytes =
+            try! "c15bf08d58a430f8c222bffaf9127249c5cdff70a2d68b2b45637eb662b6b88eb5c81451874bd9ebd4b6fd4bba1f84cdfb533c532365d22a0a702205ff658b17c9"
+                .bytes
+        let compactBytes =
+            "41c15bf08d58a430f8c222bffaf9127249c5cdff70a2d68b2b45637eb662b6b88eb5c81451874bd9ebd4b6fd4bba1f84cdfb533c532365d22a0a702205ff658b17c9"
+        XCTAssertEqual(
+            compactBytes,
+            String(bytes: Array(Data(bytes).compactSizePrefix)),
+            "Compact size prefix encoding is incorrect."
+        )
     }
 
     func testSchnorrNegating() {
@@ -641,7 +727,16 @@ final class secp256k1Tests: XCTestCase {
 
         // Combine the two public keys
         XCTAssertEqual(secp256k1_ec_pubkey_combine(context, &combinedKey, pubKeys, 2), 1)
-        XCTAssertEqual(secp256k1_ec_pubkey_serialize(context, &combinedKeyBytes, &pubKeyLen, &combinedKey, secp256k1.Format.compressed.rawValue), 1)
+        XCTAssertEqual(
+            secp256k1_ec_pubkey_serialize(
+                context,
+                &combinedKeyBytes,
+                &pubKeyLen,
+                &combinedKey,
+                secp256k1.Format.compressed.rawValue
+            ),
+            1
+        )
 
         // Define the expected combined key
         let expectedCombinedKey = try! "03d6a3a9d62c7650fcac18f9ee68c7a004ebad71b7581b683062213ad9f37ddb28".bytes
@@ -651,12 +746,12 @@ final class secp256k1Tests: XCTestCase {
 
     func testPrivateKeyPEM() {
         let privateKeyString = """
-        -----BEGIN EC PRIVATE KEY-----
-        MHQCAQEEIBXwHPDpec6b07GeLbnwetT0dvWzp0nV3MR+4pPKXIc7oAcGBSuBBAAK
-        oUQDQgAEt2uDn+2GqqYs/fmkBr5+rCQ3oiFSIJMAcjHIrTDS6HEELgguOatmFBOp
-        2wU4P2TAl/0Ihiq+nMkrAIV69m2W8g==
-        -----END EC PRIVATE KEY-----
-        """
+            -----BEGIN EC PRIVATE KEY-----
+            MHQCAQEEIBXwHPDpec6b07GeLbnwetT0dvWzp0nV3MR+4pPKXIc7oAcGBSuBBAAK
+            oUQDQgAEt2uDn+2GqqYs/fmkBr5+rCQ3oiFSIJMAcjHIrTDS6HEELgguOatmFBOp
+            2wU4P2TAl/0Ihiq+nMkrAIV69m2W8g==
+            -----END EC PRIVATE KEY-----
+            """
 
         let privateKey = try! secp256k1.Signing.PrivateKey(pemRepresentation: privateKeyString)
         let expectedPrivateKey = "15f01cf0e979ce9bd3b19e2db9f07ad4f476f5b3a749d5dcc47ee293ca5c873b"
@@ -667,11 +762,11 @@ final class secp256k1Tests: XCTestCase {
 
     func testPublicKeyPEM() {
         let publicKeyString = """
-        -----BEGIN PUBLIC KEY-----
-        MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEt2uDn+2GqqYs/fmkBr5+rCQ3oiFSIJMA
-        cjHIrTDS6HEELgguOatmFBOp2wU4P2TAl/0Ihiq+nMkrAIV69m2W8g==
-        -----END PUBLIC KEY-----
-        """
+            -----BEGIN PUBLIC KEY-----
+            MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEt2uDn+2GqqYs/fmkBr5+rCQ3oiFSIJMA
+            cjHIrTDS6HEELgguOatmFBOp2wU4P2TAl/0Ihiq+nMkrAIV69m2W8g==
+            -----END PUBLIC KEY-----
+            """
 
         let privateKeyBytes = try! "15f01cf0e979ce9bd3b19e2db9f07ad4f476f5b3a749d5dcc47ee293ca5c873b".bytes
         let privateKey = try! secp256k1.Signing.PrivateKey(dataRepresentation: privateKeyBytes, format: .uncompressed)
@@ -683,14 +778,15 @@ final class secp256k1Tests: XCTestCase {
 
     func testSigningPEM() {
         let privateKeyString = """
-        -----BEGIN EC PRIVATE KEY-----
-        MHQCAQEEIBXwHPDpec6b07GeLbnwetT0dvWzp0nV3MR+4pPKXIc7oAcGBSuBBAAK
-        oUQDQgAEt2uDn+2GqqYs/fmkBr5+rCQ3oiFSIJMAcjHIrTDS6HEELgguOatmFBOp
-        2wU4P2TAl/0Ihiq+nMkrAIV69m2W8g==
-        -----END EC PRIVATE KEY-----
-        """
+            -----BEGIN EC PRIVATE KEY-----
+            MHQCAQEEIBXwHPDpec6b07GeLbnwetT0dvWzp0nV3MR+4pPKXIc7oAcGBSuBBAAK
+            oUQDQgAEt2uDn+2GqqYs/fmkBr5+rCQ3oiFSIJMAcjHIrTDS6HEELgguOatmFBOp
+            2wU4P2TAl/0Ihiq+nMkrAIV69m2W8g==
+            -----END EC PRIVATE KEY-----
+            """
 
-        let expectedDerSignature = "MEQCIC8k5whKPsPg7XtWTInvhGL4iEU6lP6yPdpEXXZ2mOhFAiAZ3Po9tEDV8mQ8LDzwF0nhPmAn9VLYG8bkuY6PKruZNQ=="
+        let expectedDerSignature =
+            "MEQCIC8k5whKPsPg7XtWTInvhGL4iEU6lP6yPdpEXXZ2mOhFAiAZ3Po9tEDV8mQ8LDzwF0nhPmAn9VLYG8bkuY6PKruZNQ=="
         let privateKey = try! secp256k1.Signing.PrivateKey(pemRepresentation: privateKeyString)
         let messageData = "We're all Satoshi Nakamoto and a bit of Harold Thomas Finney II.".data(using: .utf8)!
 
@@ -702,13 +798,14 @@ final class secp256k1Tests: XCTestCase {
 
     func testVerifyingPEM() {
         let publicKeyString = """
-        -----BEGIN PUBLIC KEY-----
-        MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEt2uDn+2GqqYs/fmkBr5+rCQ3oiFSIJMA
-        cjHIrTDS6HEELgguOatmFBOp2wU4P2TAl/0Ihiq+nMkrAIV69m2W8g==
-        -----END PUBLIC KEY-----
-        """
+            -----BEGIN PUBLIC KEY-----
+            MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEt2uDn+2GqqYs/fmkBr5+rCQ3oiFSIJMA
+            cjHIrTDS6HEELgguOatmFBOp2wU4P2TAl/0Ihiq+nMkrAIV69m2W8g==
+            -----END PUBLIC KEY-----
+            """
 
-        let expectedSignature = "MEQCIEwVxXLE/mwaRzxLvz9VIcMtHaa/Wf1WRxiBJ6NEuWHeAiAQWf2oqqBqEtBABbmwsXqjCJFvsaPt8o+VaOthto1kWQ=="
+        let expectedSignature =
+            "MEQCIEwVxXLE/mwaRzxLvz9VIcMtHaa/Wf1WRxiBJ6NEuWHeAiAQWf2oqqBqEtBABbmwsXqjCJFvsaPt8o+VaOthto1kWQ=="
         let expectedDerSignature = Data(base64Encoded: expectedSignature, options: .ignoreUnknownCharacters)!
 
         let messageData = "We're all Satoshi Nakamoto and a bit of Harold Thomas Finney II.".data(using: .utf8)!
@@ -717,49 +814,4 @@ final class secp256k1Tests: XCTestCase {
 
         XCTAssertTrue(publicKey.isValidSignature(signature, for: SHA256.hash(data: messageData)))
     }
-
-    static var allTests = [
-        ("testUncompressedKeypairCreation", testUncompressedKeypairCreation),
-        ("testCompressedKeypairCreation", testCompressedKeypairCreation),
-        ("testECDHBindings", testECDHBindings),
-        ("testExtraKeysBindings", testExtraKeysBindings),
-        ("testRecoveryBindings", testRecoveryBindings),
-        ("testSchnorrBindings", testSchnorrBindings),
-        ("testCompressedKeypairImplementationWithRaw", testCompressedKeypairImplementationWithRaw),
-        ("testSha256", testSha256),
-        ("testShaHashDigest", testShaHashDigest),
-        ("testRecoverySigning", testRecoverySigning),
-        ("testPublicKeyRecovery", testPublicKeyRecovery),
-        ("testSigning", testSigning),
-        ("testSchnorrSigning", testSchnorrSigning),
-        ("testVerifying", testVerifying),
-        ("testSchnorrVerifyingPre", testSchnorrVerifyingPre),
-        ("testSchnorrVerifying", testSchnorrVerifying),
-        ("testVerifyingDER", testVerifyingDER),
-        ("testPrivateKey", testPrivateKey),
-        ("testCompressedPublicKey", testCompressedPublicKey),
-        ("testUncompressedPublicKey", testUncompressedPublicKey),
-        ("testUncompressedPublicKeyWithKey", testUncompressedPublicKeyWithKey),
-        ("testInvalidRawSignature", testInvalidRawSignature),
-        ("testInvalidDerSignature", testInvalidDerSignature),
-        ("testInvalidPrivateKeyBytes", testInvalidPrivateKeyBytes),
-        ("testInvalidPrivateKeyLength", testInvalidPrivateKeyLength),
-        ("testKeypairSafeCompare", testKeypairSafeCompare),
-        ("testZeroization", testZeroization),
-        ("testPrivateKeyTweakAdd", testPrivateKeyTweakAdd),
-        ("testKeyAgreement", testKeyAgreement),
-        ("testKeyAgreementHashFunction", testKeyAgreementHashFunction),
-        ("testKeyAgreementPublicKeyTweakAdd", testKeyAgreementPublicKeyTweakAdd),
-        ("testXonlyToPublicKey", testXonlyToPublicKey),
-        ("testTapscript", testTapscript),
-        ("testCompactSizePrefix", testCompactSizePrefix),
-        ("testSchnorrNegating", testSchnorrNegating),
-        ("testTaprootDerivation", testTaprootDerivation),
-        ("testPubkeyCombine", testPubkeyCombine),
-        ("testPubkeyCombineBindings", testPubkeyCombineBindings),
-        ("testPrivateKeyPEM", testPrivateKeyPEM),
-        ("testPublicKeyPEM", testPublicKeyPEM),
-        ("testSigningPEM", testSigningPEM),
-        ("testVerifyingPEM", testVerifyingPEM)
-    ]
 }

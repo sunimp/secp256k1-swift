@@ -29,13 +29,13 @@
 //
 //===----------------------------------------------------------------------===//
 #if !(os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS))
-    public typealias errno_t = CInt
+public typealias errno_t = CInt
 
-    @discardableResult
-    public func memset_s(_ s: UnsafeMutableRawPointer!, _ smax: Int, _ byte: CInt, _ n: Int) -> errno_t {
-        assert(smax == n, "memset_s invariant not met")
-        assert(byte == 0, "memset_s used to not zero anything")
-        secp256k1_swift_memczero(s, smax, 1)
-        return 0
-    }
+@discardableResult
+public func memset_s(_ s: UnsafeMutableRawPointer!, _ smax: Int, _ byte: CInt, _ n: Int) -> errno_t {
+    assert(smax == n, "memset_s invariant not met")
+    assert(byte == 0, "memset_s used to not zero anything")
+    secp256k1_swift_memczero(s, smax, 1)
+    return 0
+}
 #endif

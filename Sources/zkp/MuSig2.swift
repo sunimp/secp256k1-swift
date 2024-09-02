@@ -10,4 +10,4 @@
 
 import Foundation
 
-public extension secp256k1.Schnorr {}
+extension secp256k1.Schnorr { }

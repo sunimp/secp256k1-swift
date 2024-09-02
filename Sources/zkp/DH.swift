@@ -31,6 +31,8 @@
 
 import Foundation
 
+// MARK: - DiffieHellmanKeyAgreement
+
 /// A protocol representing a Diffie-Hellman Key Agreement Key.
 protocol DiffieHellmanKeyAgreement {
     /// The public key share type to perform the DH Key Agreement.
@@ -46,19 +48,27 @@ protocol DiffieHellmanKeyAgreement {
     func sharedSecretFromKeyAgreement(with publicKeyShare: P) throws -> SharedSecret
 }
 
+// MARK: - SharedSecret
+
 /// A Key Agreement Result.
 ///
 /// A `SharedSecret` has to go through a Key Derivation Function before being able to use by a symmetric key operation.
 public struct SharedSecret: ContiguousBytes {
+    // MARK: Properties
+
     var ss: SecureBytes
 
-    // An enum that represents the format of the shared secret
+    /// An enum that represents the format of the shared secret
     let format: secp256k1.Format
+
+    // MARK: Functions
 
     public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
         try ss.withUnsafeBytes(body)
     }
 }
+
+// MARK: Hashable
 
 extension SharedSecret: Hashable {
     public func hash(into hasher: inout Hasher) {
@@ -66,13 +76,15 @@ extension SharedSecret: Hashable {
     }
 }
 
+// MARK: CustomStringConvertible, Equatable
+
 /// Extension providing constant-time comparison and custom string representation for `SharedSecret`.
 extension SharedSecret: CustomStringConvertible, Equatable {
     public static func == (lhs: Self, rhs: Self) -> Bool {
         safeCompare(lhs, rhs)
     }
 
-    public static func == <D: DataProtocol>(lhs: Self, rhs: D) -> Bool {
+    public static func == (lhs: Self, rhs: some DataProtocol) -> Bool {
         if rhs.regions.count != 1 {
             let rhsContiguous = Data(rhs)
             return safeCompare(lhs, rhsContiguous)

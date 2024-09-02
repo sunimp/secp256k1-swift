@@ -29,18 +29,18 @@
 //
 //===----------------------------------------------------------------------===//
 #if (os(macOS) || os(iOS) || os(watchOS) || os(tvOS)) && CRYPTO_IN_SWIFTPM && !CRYPTO_IN_SWIFTPM_FORCE_BUILD_API
-    @_exported import CryptoKit
+@_exported import CryptoKit
 #else
-    import Foundation
+import Foundation
 
-    protocol DigestValidator {
-        associatedtype Signature
-        func isValidSignature<D: Digest>(_ signature: Signature, for digest: D) -> Bool
-    }
+protocol DigestValidator {
+    associatedtype Signature
+    func isValidSignature<D: Digest>(_ signature: Signature, for digest: D) -> Bool
+}
 
-    protocol DataValidator {
-        associatedtype Signature
-        func isValidSignature<D: DataProtocol>(_ signature: Signature, for signedData: D) -> Bool
-    }
+protocol DataValidator {
+    associatedtype Signature
+    func isValidSignature<D: DataProtocol>(_ signature: Signature, for signedData: D) -> Bool
+}
 
 #endif // Linux or !SwiftPM

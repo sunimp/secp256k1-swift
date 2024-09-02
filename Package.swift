@@ -1,4 +1,4 @@
-// swift-tools-version:5.8
+// swift-tools-version:5.10
 
 import PackageDescription
 
@@ -12,8 +12,8 @@ let package = Package(
     dependencies: [
         // Dependencies used for package development
         .package(url: "https://github.com/csjones/lefthook-plugin.git", exact: "1.7.14"),
-        .package(url: "https://github.com/nicklockwood/SwiftFormat.git", exact: "0.54.3"),
-        .package(url: "https://github.com/realm/SwiftLint.git", exact: "0.56.2")
+        .package(url: "https://github.com/nicklockwood/SwiftFormat.git", .upToNextMajor(from: "0.54.3")),
+        .package(url: "https://github.com/realm/SwiftLint.git", .upToNextMajor(from: "0.56.2")),
     ],
     targets: [
         .target(name: "secp256k1", dependencies: ["secp256k1_bindings"]),

@@ -10,15 +10,19 @@
 
 import Foundation
 
-// MARK: - secp256k1 + Recovery
+// MARK: - secp256k1.Recovery
 
 /// An extension for secp256k1 with a nested Recovery enum.
-public extension secp256k1 {
-    enum Recovery {
+extension secp256k1 {
+    public enum Recovery {
         /// A representation of a secp256k1 private key used for signing.
         public struct PrivateKey: Equatable {
+            // MARK: Properties
+
             /// Generated secp256k1 Signing Key.
             private let baseKey: PrivateKeyImplementation
+
+            // MARK: Computed Properties
 
             /// The associated public key for verifying signatures created with this private key.
             ///
@@ -32,12 +36,14 @@ public extension secp256k1 {
                 baseKey.dataRepresentation
             }
 
+            // MARK: Lifecycle
+
             /// Creates a random secp256k1 private key for signing.
             ///
             /// - Parameter format: The key format, default is .compressed.
             /// - Throws: An error if the private key cannot be generated.
             public init(format: secp256k1.Format = .compressed) throws {
-                self.baseKey = try PrivateKeyImplementation(format: format)
+                baseKey = try PrivateKeyImplementation(format: format)
             }
 
             /// Creates a secp256k1 private key for signing from a data representation.
@@ -45,9 +51,11 @@ public extension secp256k1 {
             /// - Parameter data: A data representation of the key.
             /// - Parameter format: The key format, default is .compressed.
             /// - Throws: An error if the raw representation does not create a private key for signing.
-            public init<D: ContiguousBytes>(dataRepresentation data: D, format: secp256k1.Format = .compressed) throws {
-                self.baseKey = try PrivateKeyImplementation(dataRepresentation: data, format: format)
+            public init(dataRepresentation data: some ContiguousBytes, format: secp256k1.Format = .compressed) throws {
+                baseKey = try PrivateKeyImplementation(dataRepresentation: data, format: format)
             }
+
+            // MARK: Static Functions
 
             /// Determines if two private keys are equal.
             ///
@@ -62,26 +70,32 @@ public extension secp256k1 {
 
         /// A struct representing a secp256k1 public key for recovery purposes.
         public struct PublicKey {
+            // MARK: Properties
+
+            /// Generated secp256k1 Public Key.
+            private let baseKey: PublicKeyImplementation
+
+            // MARK: Computed Properties
+
             /// A data representation of the public key.
             public var dataRepresentation: Data { baseKey.dataRepresentation }
 
             /// A raw representation of the public key.
             public var rawRepresentation: secp256k1_pubkey { baseKey.rawRepresentation }
 
-            /// Generated secp256k1 Public Key.
-            private let baseKey: PublicKeyImplementation
+            // MARK: Lifecycle
 
             /// Initializes a secp256k1 public key using a data message and a recovery signature.
             /// - Parameters:
             ///   - data: The data to be hash and assumed signed.
             ///   - signature: A raw representation of the initialized signature that supports pubkey recovery.
             ///   - format: The format of the public key object.
-            public init<D: DataProtocol>(
-                _ data: D,
+            public init(
+                _ data: some DataProtocol,
                 signature: secp256k1.Recovery.ECDSASignature,
                 format: secp256k1.Format = .compressed
             ) throws {
-                self.baseKey = try PublicKeyImplementation(
+                baseKey = try PublicKeyImplementation(
                     SHA256.hash(data: data),
                     signature: signature,
                     format: format
@@ -93,12 +107,12 @@ public extension secp256k1 {
             ///   - digest: The hash digest assumed to be signed.
             ///   - signature: A raw representation of the initialized signature that supports pubkey recovery.
             ///   - format: The format of the public key object.
-            public init<D: Digest>(
-                _ digest: D,
+            public init(
+                _ digest: some Digest,
                 signature: secp256k1.Recovery.ECDSASignature,
                 format: secp256k1.Format = .compressed
             ) throws {
-                self.baseKey = try PublicKeyImplementation(digest, signature: signature, format: format)
+                baseKey = try PublicKeyImplementation(digest, signature: signature, format: format)
             }
 
             /// Initializes a secp256k1 public key for recovery.
@@ -111,16 +125,20 @@ public extension secp256k1 {
 }
 
 /// An ECDSA (Elliptic Curve Digital Signature Algorithm) Recovery Signature
-public extension secp256k1.Recovery {
+extension secp256k1.Recovery {
     /// Recovery Signature
-    struct ECDSACompactSignature {
+    public struct ECDSACompactSignature {
         public let signature: Data
-        public let recoveryId: Int32
+        public let recoveryID: Int32
     }
 
-    struct ECDSASignature: ContiguousBytes, DataSignature {
+    public struct ECDSASignature: ContiguousBytes, DataSignature {
+        // MARK: Properties
+
         /// Returns the raw signature.
         public var dataRepresentation: Data
+
+        // MARK: Computed Properties
 
         /// Serialize an ECDSA signature in compact (64 byte) format.
         /// - Throws: If there is a failure parsing signature
@@ -128,24 +146,26 @@ public extension secp256k1.Recovery {
         public var compactRepresentation: ECDSACompactSignature {
             get throws {
                 let context = secp256k1.Context.rawRepresentation
-                var recoveryId = Int32()
+                var recoveryID = Int32()
                 var recoverableSignature = secp256k1_ecdsa_recoverable_signature()
                 var compactSignature = [UInt8](repeating: 0, count: secp256k1.ByteLength.signature)
 
                 dataRepresentation.copyToUnsafeMutableBytes(of: &recoverableSignature.data)
 
-                guard secp256k1_ecdsa_recoverable_signature_serialize_compact(
-                    context,
-                    &compactSignature,
-                    &recoveryId,
-                    &recoverableSignature
-                ).boolValue else {
+                guard
+                    secp256k1_ecdsa_recoverable_signature_serialize_compact(
+                        context,
+                        &compactSignature,
+                        &recoveryID,
+                        &recoverableSignature
+                    ).boolValue
+                else {
                     throw secp256k1Error.underlyingCryptoError
                 }
 
                 return secp256k1.Recovery.ECDSACompactSignature(
                     signature: Data(bytes: &compactSignature, count: secp256k1.ByteLength.signature),
-                    recoveryId: recoveryId
+                    recoveryID: recoveryID
                 )
             }
         }
@@ -159,11 +179,13 @@ public extension secp256k1.Recovery {
 
                 dataRepresentation.copyToUnsafeMutableBytes(of: &recoverableSignature.data)
 
-                guard secp256k1_ecdsa_recoverable_signature_convert(
-                    context,
-                    &normalizedSignature,
-                    &recoverableSignature
-                ).boolValue else {
+                guard
+                    secp256k1_ecdsa_recoverable_signature_convert(
+                        context,
+                        &normalizedSignature,
+                        &recoverableSignature
+                    ).boolValue
+                else {
                     throw secp256k1Error.underlyingCryptoError
                 }
 
@@ -171,16 +193,39 @@ public extension secp256k1.Recovery {
             }
         }
 
+        // MARK: Lifecycle
+
         /// Initializes ECDSASignature from the raw representation.
         /// - Parameters:
         ///   - dataRepresentation: A data representation of the key as a collection of contiguous bytes.
         /// - Throws: If there is a failure with the dataRepresentation count
-        public init<D: DataProtocol>(dataRepresentation: D) throws {
+        public init(dataRepresentation: some DataProtocol) throws {
             guard dataRepresentation.count == secp256k1.ByteLength.signature + 1 else {
                 throw secp256k1Error.incorrectParameterSize
             }
 
             self.dataRepresentation = Data(dataRepresentation)
+        }
+
+        /// Initializes ECDSASignature from the Compact representation.
+        /// - Parameter compactRepresentation: A Compact representation of the key as a collection of contiguous bytes.
+        /// - Throws: If there is a failure with parsing the derRepresentation
+        public init(compactRepresentation: some DataProtocol, recoveryID: Int32) throws {
+            let context = secp256k1.Context.rawRepresentation
+            var recoverableSignature = secp256k1_ecdsa_recoverable_signature()
+
+            guard
+                secp256k1_ecdsa_recoverable_signature_parse_compact(
+                    context,
+                    &recoverableSignature,
+                    Array(compactRepresentation),
+                    recoveryID
+                ).boolValue
+            else {
+                throw secp256k1Error.underlyingCryptoError
+            }
+
+            dataRepresentation = recoverableSignature.dataValue
         }
 
         /// Initializes ECDSASignature from the raw representation.
@@ -195,27 +240,11 @@ public extension secp256k1.Recovery {
             self.dataRepresentation = dataRepresentation
         }
 
-        /// Initializes ECDSASignature from the Compact representation.
-        /// - Parameter compactRepresentation: A Compact representation of the key as a collection of contiguous bytes.
-        /// - Throws: If there is a failure with parsing the derRepresentation
-        public init<D: DataProtocol>(compactRepresentation: D, recoveryId: Int32) throws {
-            let context = secp256k1.Context.rawRepresentation
-            var recoverableSignature = secp256k1_ecdsa_recoverable_signature()
-
-            guard secp256k1_ecdsa_recoverable_signature_parse_compact(
-                context,
-                &recoverableSignature,
-                Array(compactRepresentation),
-                recoveryId
-            ).boolValue else {
-                throw secp256k1Error.underlyingCryptoError
-            }
-
-            self.dataRepresentation = recoverableSignature.dataValue
-        }
+        // MARK: Functions
 
         /// Invokes the given closure with a buffer pointer covering the raw bytes of the digest.
-        /// - Parameter body: A closure that takes a raw buffer pointer to the bytes of the digest and returns the digest.
+        /// - Parameter body: A closure that takes a raw buffer pointer to the bytes of the digest and returns the
+        /// digest.
         /// - Throws: If there is a failure with underlying `withUnsafeBytes`
         /// - Returns: The signature as returned from the body closure.
         public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
@@ -224,7 +253,7 @@ public extension secp256k1.Recovery {
     }
 }
 
-// MARK: - secp256k1 + Recovery
+// MARK: - secp256k1.Recovery.PrivateKey + DigestSigner
 
 extension secp256k1.Recovery.PrivateKey: DigestSigner {
     public typealias Signature = secp256k1.Recovery.ECDSASignature
@@ -234,18 +263,20 @@ extension secp256k1.Recovery.PrivateKey: DigestSigner {
     /// - Parameter digest: The digest to sign.
     /// - Returns: The recoverable ECDSA Signature.
     /// - Throws: If there is a failure producing the signature
-    public func signature<D: Digest>(for digest: D) throws -> Signature {
+    public func signature(for digest: some Digest) throws -> Signature {
         let context = secp256k1.Context.rawRepresentation
         var signature = secp256k1_ecdsa_recoverable_signature()
 
-        guard secp256k1_ecdsa_sign_recoverable(
-            context,
-            &signature,
-            Array(digest),
-            Array(dataRepresentation),
-            nil,
-            nil
-        ).boolValue else {
+        guard
+            secp256k1_ecdsa_sign_recoverable(
+                context,
+                &signature,
+                Array(digest),
+                Array(dataRepresentation),
+                nil,
+                nil
+            ).boolValue
+        else {
             throw secp256k1Error.underlyingCryptoError
         }
 
@@ -253,13 +284,15 @@ extension secp256k1.Recovery.PrivateKey: DigestSigner {
     }
 }
 
+// MARK: - secp256k1.Recovery.PrivateKey + Signer
+
 extension secp256k1.Recovery.PrivateKey: Signer {
     /// Generates a recoverable ECDSA signature. SHA256 is used as the hash function.
     ///
     /// - Parameter data: The data to sign.
     /// - Returns: The ECDSA Signature.
     /// - Throws: If there is a failure producing the signature.
-    public func signature<D: DataProtocol>(for data: D) throws -> Signature {
+    public func signature(for data: some DataProtocol) throws -> Signature {
         try signature(for: SHA256.hash(data: data))
     }
 }

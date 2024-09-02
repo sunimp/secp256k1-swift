@@ -29,109 +29,125 @@
 //
 //===----------------------------------------------------------------------===//
 #if CRYPTO_IN_SWIFTPM && !CRYPTO_IN_SWIFTPM_FORCE_BUILD_API
-    @_exported import CryptoKit
+@_exported import CryptoKit
 #else
-    import Foundation
+import Foundation
 
-    extension ASN1 {
-        struct SubjectPublicKeyInfo: ASN1ImplicitlyTaggable {
-            static var defaultIdentifier: ASN1.ASN1Identifier {
-                .sequence
-            }
+extension ASN1 {
+    struct SubjectPublicKeyInfo: ASN1ImplicitlyTaggable {
+        // MARK: Static Computed Properties
 
-            var algorithmIdentifier: RFC5480AlgorithmIdentifier
+        static var defaultIdentifier: ASN1.ASN1Identifier {
+            .sequence
+        }
 
-            var key: ASN1.ASN1BitString
+        // MARK: Properties
 
-            init(asn1Encoded rootNode: ASN1.ASN1Node, withIdentifier identifier: ASN1.ASN1Identifier) throws {
-                // The SPKI block looks like this:
-                //
-                // SubjectPublicKeyInfo  ::=  SEQUENCE  {
-                //   algorithm         AlgorithmIdentifier,
-                //   subjectPublicKey  BIT STRING
-                // }
-                self = try ASN1.sequence(rootNode, identifier: identifier) { nodes in
-                    let algorithmIdentifier = try ASN1.RFC5480AlgorithmIdentifier(asn1Encoded: &nodes)
-                    let key = try ASN1.ASN1BitString(asn1Encoded: &nodes)
+        var algorithmIdentifier: RFC5480AlgorithmIdentifier
 
-                    return Self(algorithmIdentifier: algorithmIdentifier, key: key)
-                }
-            }
+        var key: ASN1.ASN1BitString
 
-            private init(algorithmIdentifier: RFC5480AlgorithmIdentifier, key: ASN1.ASN1BitString) {
-                self.algorithmIdentifier = algorithmIdentifier
-                self.key = key
-            }
+        // MARK: Lifecycle
 
-            init(algorithmIdentifier: RFC5480AlgorithmIdentifier, key: [UInt8]) {
-                self.algorithmIdentifier = algorithmIdentifier
-                self.key = ASN1BitString(bytes: key[...])
-            }
+        init(asn1Encoded rootNode: ASN1.ASN1Node, withIdentifier identifier: ASN1.ASN1Identifier) throws {
+            // The SPKI block looks like this:
+            //
+            // SubjectPublicKeyInfo  ::=  SEQUENCE  {
+            //   algorithm         AlgorithmIdentifier,
+            //   subjectPublicKey  BIT STRING
+            // }
+            self = try ASN1.sequence(rootNode, identifier: identifier) { nodes in
+                let algorithmIdentifier = try ASN1.RFC5480AlgorithmIdentifier(asn1Encoded: &nodes)
+                let key = try ASN1.ASN1BitString(asn1Encoded: &nodes)
 
-            func serialize(into coder: inout ASN1.Serializer, withIdentifier identifier: ASN1.ASN1Identifier) throws {
-                try coder.appendConstructedNode(identifier: identifier) { coder in
-                    try coder.serialize(self.algorithmIdentifier)
-                    try coder.serialize(self.key)
-                }
+                return Self(algorithmIdentifier: algorithmIdentifier, key: key)
             }
         }
 
-        struct RFC5480AlgorithmIdentifier: ASN1ImplicitlyTaggable, Hashable {
-            static var defaultIdentifier: ASN1.ASN1Identifier {
-                .sequence
-            }
+        init(algorithmIdentifier: RFC5480AlgorithmIdentifier, key: [UInt8]) {
+            self.algorithmIdentifier = algorithmIdentifier
+            self.key = ASN1BitString(bytes: key[...])
+        }
 
-            var algorithm: ASN1.ASN1ObjectIdentifier
+        private init(algorithmIdentifier: RFC5480AlgorithmIdentifier, key: ASN1.ASN1BitString) {
+            self.algorithmIdentifier = algorithmIdentifier
+            self.key = key
+        }
 
-            var parameters: ASN1.ASN1Any?
+        // MARK: Functions
 
-            init(algorithm: ASN1.ASN1ObjectIdentifier, parameters: ASN1.ASN1Any?) {
-                self.algorithm = algorithm
-                self.parameters = parameters
-            }
-
-            init(asn1Encoded rootNode: ASN1.ASN1Node, withIdentifier identifier: ASN1.ASN1Identifier) throws {
-                // The AlgorithmIdentifier block looks like this.
-                //
-                // AlgorithmIdentifier  ::=  SEQUENCE  {
-                //   algorithm   OBJECT IDENTIFIER,
-                //   parameters  ANY DEFINED BY algorithm OPTIONAL
-                // }
-                //
-                // ECParameters ::= CHOICE {
-                //   namedCurve         OBJECT IDENTIFIER
-                //   -- implicitCurve   NULL
-                //   -- specifiedCurve  SpecifiedECDomain
-                // }
-                //
-                // We don't bother with helpers: we just try to decode it directly.
-                self = try ASN1.sequence(rootNode, identifier: identifier) { nodes in
-                    let algorithmOID = try ASN1.ASN1ObjectIdentifier(asn1Encoded: &nodes)
-
-                    let parameters = nodes.next().map { ASN1.ASN1Any(asn1Encoded: $0) }
-
-                    return .init(algorithm: algorithmOID, parameters: parameters)
-                }
-            }
-
-            func serialize(into coder: inout ASN1.Serializer, withIdentifier identifier: ASN1.ASN1Identifier) throws {
-                try coder.appendConstructedNode(identifier: identifier) { coder in
-                    try coder.serialize(self.algorithm)
-                    if let parameters = self.parameters {
-                        try coder.serialize(parameters)
-                    }
-                }
+        func serialize(into coder: inout ASN1.Serializer, withIdentifier identifier: ASN1.ASN1Identifier) throws {
+            try coder.appendConstructedNode(identifier: identifier) { coder in
+                try coder.serialize(algorithmIdentifier)
+                try coder.serialize(key)
             }
         }
     }
 
-    // MARK: Algorithm Identifier Statics
+    struct RFC5480AlgorithmIdentifier: ASN1ImplicitlyTaggable, Hashable {
+        // MARK: Static Computed Properties
 
-    extension ASN1.RFC5480AlgorithmIdentifier {
-        static let ecdsaP256K1 = ASN1.RFC5480AlgorithmIdentifier(
-            algorithm: .AlgorithmIdentifier.idEcPublicKey,
-            parameters: try! .init(erasing: ASN1.ASN1ObjectIdentifier.NamedCurves.secp256k1)
-        )
+        static var defaultIdentifier: ASN1.ASN1Identifier {
+            .sequence
+        }
+
+        // MARK: Properties
+
+        var algorithm: ASN1.ASN1ObjectIdentifier
+
+        var parameters: ASN1.ASN1Any?
+
+        // MARK: Lifecycle
+
+        init(algorithm: ASN1.ASN1ObjectIdentifier, parameters: ASN1.ASN1Any?) {
+            self.algorithm = algorithm
+            self.parameters = parameters
+        }
+
+        init(asn1Encoded rootNode: ASN1.ASN1Node, withIdentifier identifier: ASN1.ASN1Identifier) throws {
+            // The AlgorithmIdentifier block looks like this.
+            //
+            // AlgorithmIdentifier  ::=  SEQUENCE  {
+            //   algorithm   OBJECT IDENTIFIER,
+            //   parameters  ANY DEFINED BY algorithm OPTIONAL
+            // }
+            //
+            // ECParameters ::= CHOICE {
+            //   namedCurve         OBJECT IDENTIFIER
+            //   -- implicitCurve   NULL
+            //   -- specifiedCurve  SpecifiedECDomain
+            // }
+            //
+            // We don't bother with helpers: we just try to decode it directly.
+            self = try ASN1.sequence(rootNode, identifier: identifier) { nodes in
+                let algorithmOID = try ASN1.ASN1ObjectIdentifier(asn1Encoded: &nodes)
+
+                let parameters = nodes.next().map { ASN1.ASN1Any(asn1Encoded: $0) }
+
+                return .init(algorithm: algorithmOID, parameters: parameters)
+            }
+        }
+
+        // MARK: Functions
+
+        func serialize(into coder: inout ASN1.Serializer, withIdentifier identifier: ASN1.ASN1Identifier) throws {
+            try coder.appendConstructedNode(identifier: identifier) { coder in
+                try coder.serialize(algorithm)
+                if let parameters {
+                    try coder.serialize(parameters)
+                }
+            }
+        }
     }
+}
+
+// MARK: Algorithm Identifier Statics
+
+extension ASN1.RFC5480AlgorithmIdentifier {
+    static let ecdsaP256K1 = ASN1.RFC5480AlgorithmIdentifier(
+        algorithm: .AlgorithmIdentifier.idEcPublicKey,
+        parameters: try! .init(erasing: ASN1.ASN1ObjectIdentifier.NamedCurves.secp256k1)
+    )
+}
 
 #endif // Linux or !SwiftPM

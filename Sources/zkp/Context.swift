@@ -17,7 +17,7 @@
 /// A constructed context can safely be used from multiple threads simultaneously, but API calls that take a non-const
 /// pointer to a context need exclusive access to it. In particular this is the case for `secp256k1_context_destroy`,
 /// `secp256k1_context_preallocated_destroy`, and `secp256k1_context_randomize`.
-public extension secp256k1 {
+extension secp256k1 {
     /// A structure that represents the context flags for `secp256k1` operations.
     ///
     /// This structure conforms to the `OptionSet` protocol, allowing you to combine different context flags.
@@ -26,12 +26,24 @@ public extension secp256k1 {
     /// The `Context` structure is used to create and manage the context for `secp256k1` operations.
     /// It is used in the creation of the `secp256k1` context and also in determining the size of the preallocated
     /// memory for the context.
-    struct Context: OptionSet {
+    public struct Context: OptionSet {
+        // MARK: Static Properties
+
         /// The raw representation of `secp256k1.Context`
         public static let rawRepresentation = try! secp256k1.Context.create()
 
+        /// No context flag.
+        ///
+        /// This static property represents a `Context` with no flags. It can be used when creating a `secp256k1`
+        /// context with no flags.
+        public static let none = Self(rawValue: SECP256K1_CONTEXT_NONE)
+
+        // MARK: Properties
+
         /// The raw value of the context flags.
         public let rawValue: UInt32
+
+        // MARK: Lifecycle
 
         /// Creates a new `Context` instance with the specified raw value.
         public init(rawValue: UInt32) { self.rawValue = rawValue }
@@ -40,11 +52,7 @@ public extension secp256k1 {
         /// - Parameter rawValue: The Int32 raw value for the context flags.
         init(rawValue: Int32) { self.rawValue = UInt32(rawValue) }
 
-        /// No context flag.
-        ///
-        /// This static property represents a `Context` with no flags. It can be used when creating a `secp256k1`
-        /// context with no flags.
-        public static let none = Self(rawValue: SECP256K1_CONTEXT_NONE)
+        // MARK: Static Functions
 
         /// Creates a new `secp256k1` context with the specified flags.
         ///
@@ -58,8 +66,10 @@ public extension secp256k1 {
         /// context creation is successful, the method returns an opaque pointer to the created context.
         public static func create(_ context: Self = .none) throws -> OpaquePointer {
             var randomBytes = SecureBytes(count: secp256k1.ByteLength.privateKey).bytes
-            guard let context = secp256k1_context_create(context.rawValue),
-                  secp256k1_context_randomize(context, &randomBytes).boolValue else {
+            guard
+                let context = secp256k1_context_create(context.rawValue),
+                secp256k1_context_randomize(context, &randomBytes).boolValue
+            else {
                 throw secp256k1Error.underlyingCryptoError
             }
 

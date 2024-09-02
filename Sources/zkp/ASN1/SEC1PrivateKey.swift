@@ -29,93 +29,110 @@
 //
 //===----------------------------------------------------------------------===//
 #if CRYPTO_IN_SWIFTPM && !CRYPTO_IN_SWIFTPM_FORCE_BUILD_API
-    @_exported import CryptoKit
+@_exported import CryptoKit
 #else
-    import Foundation
+import Foundation
 
-    extension ASN1 {
-        // For private keys, SEC 1 uses:
-        //
-        // ECPrivateKey ::= SEQUENCE {
-        //   version INTEGER { ecPrivkeyVer1(1) } (ecPrivkeyVer1),
-        //   privateKey OCTET STRING,
-        //   parameters [0] EXPLICIT ECDomainParameters OPTIONAL,
-        //   publicKey [1] EXPLICIT BIT STRING OPTIONAL
-        // }
-        struct SEC1PrivateKey: ASN1ImplicitlyTaggable {
-            static var defaultIdentifier: ASN1.ASN1Identifier {
-                .sequence
-            }
+extension ASN1 {
+    /// For private keys, SEC 1 uses:
+    ///
+    /// ECPrivateKey ::= SEQUENCE {
+    ///   version INTEGER { ecPrivkeyVer1(1) } (ecPrivkeyVer1),
+    ///   privateKey OCTET STRING,
+    ///   parameters [0] EXPLICIT ECDomainParameters OPTIONAL,
+    ///   publicKey [1] EXPLICIT BIT STRING OPTIONAL
+    /// }
+    struct SEC1PrivateKey: ASN1ImplicitlyTaggable {
+        // MARK: Static Computed Properties
 
-            var algorithm: ASN1.RFC5480AlgorithmIdentifier?
+        static var defaultIdentifier: ASN1.ASN1Identifier {
+            .sequence
+        }
 
-            var privateKey: ASN1.ASN1OctetString
+        // MARK: Properties
 
-            var publicKey: ASN1.ASN1BitString?
+        var algorithm: ASN1.RFC5480AlgorithmIdentifier?
 
-            init(asn1Encoded rootNode: ASN1.ASN1Node, withIdentifier identifier: ASN1.ASN1Identifier) throws {
-                self = try ASN1.sequence(rootNode, identifier: identifier) { nodes in
-                    let version = try Int(asn1Encoded: &nodes)
-                    guard version == 1 else {
-                        throw CryptoKitASN1Error.invalidASN1Object
-                    }
+        var privateKey: ASN1.ASN1OctetString
 
-                    let privateKey = try ASN1OctetString(asn1Encoded: &nodes)
-                    let parameters = try ASN1.optionalExplicitlyTagged(&nodes, tagNumber: 0, tagClass: .contextSpecific) { node in
-                        try ASN1.ASN1ObjectIdentifier(asn1Encoded: node)
-                    }
-                    let publicKey = try ASN1.optionalExplicitlyTagged(&nodes, tagNumber: 1, tagClass: .contextSpecific) { node in
+        var publicKey: ASN1.ASN1BitString?
+
+        // MARK: Lifecycle
+
+        init(asn1Encoded rootNode: ASN1.ASN1Node, withIdentifier identifier: ASN1.ASN1Identifier) throws {
+            self = try ASN1.sequence(rootNode, identifier: identifier) { nodes in
+                let version = try Int(asn1Encoded: &nodes)
+                guard version == 1 else {
+                    throw CryptoKitASN1Error.invalidASN1Object
+                }
+
+                let privateKey = try ASN1OctetString(asn1Encoded: &nodes)
+                let parameters = try ASN1.optionalExplicitlyTagged(
+                    &nodes,
+                    tagNumber: 0,
+                    tagClass: .contextSpecific
+                ) { node in
+                    try ASN1.ASN1ObjectIdentifier(asn1Encoded: node)
+                }
+                let publicKey = try ASN1
+                    .optionalExplicitlyTagged(&nodes, tagNumber: 1, tagClass: .contextSpecific) { node in
                         try ASN1.ASN1BitString(asn1Encoded: node)
                     }
 
-                    return try .init(privateKey: privateKey, algorithm: parameters, publicKey: publicKey)
+                return try .init(privateKey: privateKey, algorithm: parameters, publicKey: publicKey)
+            }
+        }
+
+        init(privateKey: [UInt8], algorithm: RFC5480AlgorithmIdentifier?, publicKey: [UInt8]) {
+            self.privateKey = ASN1OctetString(contentBytes: privateKey[...])
+            self.algorithm = algorithm
+            self.publicKey = ASN1BitString(bytes: publicKey[...])
+        }
+
+        private init(
+            privateKey: ASN1.ASN1OctetString,
+            algorithm: ASN1.ASN1ObjectIdentifier?,
+            publicKey: ASN1.ASN1BitString?
+        ) throws {
+            self.privateKey = privateKey
+            self.publicKey = publicKey
+            self.algorithm = try algorithm.map { algorithmOID in
+                switch algorithmOID {
+                case ASN1ObjectIdentifier.NamedCurves.secp256k1:
+                    return .ecdsaP256K1
+
+                default:
+                    throw CryptoKitASN1Error.invalidASN1Object
                 }
             }
+        }
 
-            private init(privateKey: ASN1.ASN1OctetString, algorithm: ASN1.ASN1ObjectIdentifier?, publicKey: ASN1.ASN1BitString?) throws {
-                self.privateKey = privateKey
-                self.publicKey = publicKey
-                self.algorithm = try algorithm.map { algorithmOID in
-                    switch algorithmOID {
-                    case ASN1ObjectIdentifier.NamedCurves.secp256k1:
-                        return .ecdsaP256K1
+        // MARK: Functions
+
+        func serialize(into coder: inout ASN1.Serializer, withIdentifier identifier: ASN1.ASN1Identifier) throws {
+            try coder.appendConstructedNode(identifier: identifier) { coder in
+                try coder.serialize(1) // version
+                try coder.serialize(privateKey)
+
+                if let algorithm {
+                    let oid: ASN1.ASN1ObjectIdentifier
+                    switch algorithm {
+                    case .ecdsaP256K1:
+                        oid = ASN1ObjectIdentifier.NamedCurves.secp256k1
 
                     default:
                         throw CryptoKitASN1Error.invalidASN1Object
                     }
+
+                    try coder.serialize(oid, explicitlyTaggedWithTagNumber: 0, tagClass: .contextSpecific)
                 }
-            }
 
-            init(privateKey: [UInt8], algorithm: RFC5480AlgorithmIdentifier?, publicKey: [UInt8]) {
-                self.privateKey = ASN1OctetString(contentBytes: privateKey[...])
-                self.algorithm = algorithm
-                self.publicKey = ASN1BitString(bytes: publicKey[...])
-            }
-
-            func serialize(into coder: inout ASN1.Serializer, withIdentifier identifier: ASN1.ASN1Identifier) throws {
-                try coder.appendConstructedNode(identifier: identifier) { coder in
-                    try coder.serialize(1) // version
-                    try coder.serialize(self.privateKey)
-
-                    if let algorithm = self.algorithm {
-                        let oid: ASN1.ASN1ObjectIdentifier
-                        switch algorithm {
-                        case .ecdsaP256K1:
-                            oid = ASN1ObjectIdentifier.NamedCurves.secp256k1
-
-                        default:
-                            throw CryptoKitASN1Error.invalidASN1Object
-                        }
-
-                        try coder.serialize(oid, explicitlyTaggedWithTagNumber: 0, tagClass: .contextSpecific)
-                    }
-
-                    if let publicKey = self.publicKey {
-                        try coder.serialize(publicKey, explicitlyTaggedWithTagNumber: 1, tagClass: .contextSpecific)
-                    }
+                if let publicKey {
+                    try coder.serialize(publicKey, explicitlyTaggedWithTagNumber: 1, tagClass: .contextSpecific)
                 }
             }
         }
     }
+}
 
 #endif // Linux or !SwiftPM

@@ -36,27 +36,44 @@ import Foundation
 /// A typealias for the `HashDigest` struct as `SHA256Digest`.
 public typealias SHA256Digest = HashDigest
 
+// MARK: - HashDigest
+
 /// A struct representing a hash digest.
 public struct HashDigest: Digest {
-    let bytes: (UInt64, UInt64, UInt64, UInt64)
-
-    /// Initializes a hash digest from an array of bytes.
-    ///
-    /// - Parameter output: An array of bytes to create the hash digest.
-    public init(_ output: [UInt8]) {
-        let first = output[0..<8].withUnsafeBytes { $0.load(as: UInt64.self) }
-        let second = output[8..<16].withUnsafeBytes { $0.load(as: UInt64.self) }
-        let third = output[16..<24].withUnsafeBytes { $0.load(as: UInt64.self) }
-        let forth = output[24..<32].withUnsafeBytes { $0.load(as: UInt64.self) }
-
-        self.bytes = (first, second, third, forth)
-    }
+    // MARK: Static Computed Properties
 
     /// The byte count of the hash digest.
     public static var byteCount: Int {
         get { SHA256.digestByteCount }
         set { fatalError("Cannot set SHA256.byteCount") }
     }
+
+    // MARK: Properties
+
+    let bytes: (UInt64, UInt64, UInt64, UInt64)
+
+    // MARK: Computed Properties
+
+    /// A string representation of the hash digest.
+    public var description: String {
+        "SHA256 digest: \(toArray().hexString)"
+    }
+
+    // MARK: Lifecycle
+
+    /// Initializes a hash digest from an array of bytes.
+    ///
+    /// - Parameter output: An array of bytes to create the hash digest.
+    public init(_ output: [UInt8]) {
+        let first = output[0 ..< 8].withUnsafeBytes { $0.load(as: UInt64.self) }
+        let second = output[8 ..< 16].withUnsafeBytes { $0.load(as: UInt64.self) }
+        let third = output[16 ..< 24].withUnsafeBytes { $0.load(as: UInt64.self) }
+        let forth = output[24 ..< 32].withUnsafeBytes { $0.load(as: UInt64.self) }
+
+        bytes = (first, second, third, forth)
+    }
+
+    // MARK: Functions
 
     /// Executes a closure while passing an `UnsafeRawBufferPointer`.
     ///
@@ -72,6 +89,13 @@ public struct HashDigest: Digest {
         }
     }
 
+    /// Hashes the hash digest into the hasher.
+    ///
+    /// - Parameter hasher: An inout hasher.
+    public func hash(into hasher: inout Hasher) {
+        withUnsafeBytes { hasher.combine(bytes: $0) }
+    }
+
     /// Converts the hash digest to an array slice of bytes.
     ///
     /// - Returns: An array slice of bytes.
@@ -83,19 +107,9 @@ public struct HashDigest: Digest {
         array.appendByte(bytes.3)
         return array.prefix(upTo: Self.byteCount)
     }
-
-    /// A string representation of the hash digest.
-    public var description: String {
-        "SHA256 digest: \(toArray().hexString)"
-    }
-
-    /// Hashes the hash digest into the hasher.
-    ///
-    /// - Parameter hasher: An inout hasher.
-    public func hash(into hasher: inout Hasher) {
-        withUnsafeBytes { hasher.combine(bytes: $0) }
-    }
 }
+
+// MARK: Comparable
 
 extension HashDigest: Comparable {
     public static func < (lhs: HashDigest, rhs: HashDigest) -> Bool {
